@@ -84,6 +84,35 @@ relaunch that ends after its session ended, or after a newer relaunch of the
 same browser started, reports nothing. This is not a guarantee that every web
 app will keep working while the lid is closed.
 
+## Controlling a session from other apps
+
+Other apps can start, extend and end a session by opening an `insomnia://`
+URL, so a launcher such as Raycast, a Shortcuts action or a script can drive
+Insomnia without the menu bar:
+
+```bash
+open "insomnia://start"                      # the default preset, like bare Enter
+open "insomnia://start?hours=2&minutes=30"   # days, hours and minutes, any mix
+open "insomnia://extend?minutes=30"          # add time to the running session
+open "insomnia://end"                        # end the session, like hold-to-end
+```
+
+Each URL runs the same code as its menu bar gesture, so the countdown, the
+recovery agent and the clamp to the longest session all behave the same. A
+`start` while a session runs is ignored, as are `extend` and `end` with no
+session. Insomnia launches if it isn't running, and waits for its launch
+check to finish before it acts. It ignores a URL it can't read whole, and
+logs what it received and ignored.
+
+Any app that can open a URL can send these, and a web page can too once you
+confirm the browser's prompt to open Insomnia. The worst one can do is start,
+lengthen or end a session, which the sudoers rule already lets any program
+running as you do.
+
+To read the session without changing it, read `endsAt` (ISO 8601) from
+`~/Library/Application Support/Insomnia/session.json`. The file exists only
+while a session is active or starting.
+
 ## Configuration and privacy
 
 Configuration lives in `~/Library/Application Support/Insomnia/config.json`.

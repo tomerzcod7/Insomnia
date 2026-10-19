@@ -215,6 +215,16 @@ details.
 </details>
 
 <details>
+<summary><strong>Raycast, Shortcuts and scripts</strong></summary>
+
+Other apps can start, extend and end a session through `insomnia://` URLs,
+for example `open "insomnia://start?hours=2"`.
+[docs/extras.md](docs/extras.md#controlling-a-session-from-other-apps) lists
+them.
+
+</details>
+
+<details>
 <summary><strong>Configuration and privacy</strong></summary>
 
 Settings live in `~/Library/Application Support/Insomnia/config.json` and logs

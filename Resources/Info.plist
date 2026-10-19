@@ -34,6 +34,17 @@
 	<string>Insomnia needs your location permission so macOS lets it see Wi-Fi network names and rejoin your hotspot.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.kgarg.insomnia</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>insomnia</string>
+			</array>
+		</dict>
+	</array>
 	<key>InsomniaResumeFrozenVersion</key>
 	<integer>1</integer>
 	<key>NSHumanReadableCopyright</key>

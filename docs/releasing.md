@@ -223,6 +223,7 @@ below cover what only a real Mac shows.
 ### Sessions and recovery
 
 - Normal end, deadline expiry, and repeated Quit restore live power state
+- `insomnia://` URLs: with the app running, `open "insomnia://start?minutes=5"`, `open "insomnia://extend?minutes=5"` and `open "insomnia://end"` each change the menu bar as the matching gesture does; with the app quit, `open "insomnia://start?minutes=5"` launches it and starts the session only after the launch reconcile, and a malformed URL (`insomnia://start?hours=1.5`) changes nothing and logs "url command ignored"
 - Sleep guard read back: on a Mac where another process sets SleepDisabled back to 0 about 2 s after `pmset -a disablesleep 1` (for example a root LaunchDaemon that loops `pmset -a disablesleep 0`), Start fails after about 5 s with "SleepDisabled read 0 again" and no session runs; on a Mac where the bit holds, the session starts about 5 s after Start and `pmset -g` reads SleepDisabled 1
 - Force-quit followed by launchd deadline recovery and retry after failure
 - The recovery agent between sessions (no session.json, the clean journal a finished session leaves): `launchctl print gui/$(id -u)/com.insomnia.backstop` counts a run each minute with last exit code 0, the backstop writes nothing to insomnia.log and state.json is unchanged; a force-quit in the next session is still recovered at the deadline

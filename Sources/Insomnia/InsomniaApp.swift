@@ -27,6 +27,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: StatusItemController?
     private var settingsWindow: SettingsWindow?
     private var terminating = false
+    /// `insomnia://` commands that arrived before the launch reconcile
+    /// finished, in arrival order (see `URLCommand`).
+    private var queuedURLCommands: [URLCommand] = []
+    private var urlCommandsReady = false
+    private var runningURLCommands = false
 
     override init() {
         let manager = SessionManager.live()
@@ -49,6 +54,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Before launch finishes, so the first notification already shows
         // while Insomnia is frontmost.
         ForegroundNotifications.install()
+        // Before launch finishes too: a URL that launched the app is
+        // delivered as the first event after it. A handler of our own, not
+        // `application(_:open:)`, so SwiftUI's scene routing cannot claim it.
+        NSAppleEventManager.shared().setEventHandler(
+            self,
+            andSelector: #selector(handleGetURL(_:withReplyEvent:)),
+            forEventClass: AEEventClass(kInternetEventClass),
+            andEventID: AEEventID(kAEGetURL)
+        )
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -86,7 +100,64 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = StatusItemController(manager: manager, status: status) { [weak settings] in
             settings?.show()
         }
-        Task { await manager.reconcile() }
+        Task {
+            await manager.reconcile()
+            // A command that starts or extends before the launch reconcile
+            // has undone a stale journal would act on the wrong state.
+            urlCommandsReady = true
+            runURLCommands()
+        }
+    }
+
+    @objc private func handleGetURL(_ event: NSAppleEventDescriptor, withReplyEvent reply: NSAppleEventDescriptor) {
+        guard let text = event.paramDescriptor(forKeyword: keyDirectObject)?.stringValue,
+              let url = URL(string: text)
+        else {
+            Log.error("url command ignored: no URL in the event")
+            return
+        }
+        guard let command = URLCommand.parse(url) else {
+            Log.error("url command ignored: not one Insomnia understands")
+            return
+        }
+        Log.info("url command received: \(command)")
+        queuedURLCommands.append(command)
+        runURLCommands()
+    }
+
+    /// Runs queued URL commands one at a time, in order, once the launch
+    /// reconcile is done. Each goes through the same manager call as its
+    /// menu bar gesture, so the status item follows along by itself.
+    private func runURLCommands() {
+        guard urlCommandsReady, !runningURLCommands, !terminating else { return }
+        runningURLCommands = true
+        Task {
+            while !queuedURLCommands.isEmpty, !terminating {
+                let command = queuedURLCommands.removeFirst()
+                switch command {
+                case let .start(duration):
+                    let preset = manager.config.defaultPreset
+                    guard let seconds = duration ?? (preset > 0 ? preset : nil) else {
+                        Log.error("url start ignored: no duration and no default preset")
+                        continue
+                    }
+                    await manager.start(duration: seconds)
+                case let .extend(seconds):
+                    if manager.isActive {
+                        await manager.extend(by: seconds)
+                    } else {
+                        Log.info("url extend ignored: no session running")
+                    }
+                case .end:
+                    if manager.isActive {
+                        await manager.end(reason: .user)
+                    } else {
+                        Log.info("url end ignored: no session running")
+                    }
+                }
+            }
+            runningURLCommands = false
+        }
     }
 
     /// Quitting always ends the session (spec 1). Terminate is deferred until
